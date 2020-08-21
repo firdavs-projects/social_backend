@@ -32,7 +32,19 @@ methods.set('/posts.get', function ({ response }) {
     sendJSON(response, posts);
 });
 
-methods.set('/posts.getById', function () { });
+methods.set('/posts.getById', function ({ response, searchParams }) {
+    const id = Number(searchParams.get('id'));
+    if (isNaN(id) | id == '') {
+        sendResponse(response, { status: statusBadRequest });
+        return;
+    }
+    const post = posts.filter(el => el.id == id);
+    if (post.length == 0) {
+        sendResponse(response, { status: statusNotFound });
+        return;
+    }
+    sendJSON(response, post);
+});
 
 methods.set('/posts.post', function ({ response, searchParams }) {
     if (!searchParams.has('content')) {
@@ -60,7 +72,7 @@ const server = http.createServer(function (request, response) {
 
     const method = methods.get(pathname);
     if (method === undefined) {
-        sendResponse(response,{status: statusNotFound});
+        sendResponse(response, { status: statusNotFound });
         return;
     }
 
