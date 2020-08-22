@@ -29,7 +29,8 @@ function sendJSON(response, body) {
 
 const methods = new Map();
 methods.set('/posts.get', function ({ response }) {
-    sendJSON(response, posts);
+    const filtered = posts.filter(el => el.removed === false);
+    sendJSON(response, filtered);
 });
 
 methods.set('/posts.getById', function ({ response, searchParams }) {
@@ -39,7 +40,7 @@ methods.set('/posts.getById', function ({ response, searchParams }) {
         return;
     }
     const post = posts.find(el => el.id === Number(id));
-    if (!post) {
+    if (!post | post.removed === true) {
         sendResponse(response, { status: statusNotFound });
         return;
     }
@@ -58,6 +59,7 @@ methods.set('/posts.post', function ({ response, searchParams }) {
         id: nextId++,
         content: content,
         created: Date.now(),
+        removed: false,
     };
 
     posts.unshift(post);
@@ -72,7 +74,7 @@ methods.set('/posts.edit', function ({ response, searchParams }) {
         return;
     }
     const post = posts.find(el => el.id === Number(id));
-    if (!post) {
+    if (!post | post.removed === true) {
         sendResponse(response, { status: statusNotFound });
         return;
     }
@@ -88,13 +90,13 @@ methods.set('/posts.delete', function ({ response, searchParams }) {
         return;
     }
     const post = posts.find(el => el.id === Number(id));
-    if (!post) {
+    if (!post | post.removed === true) {
         sendResponse(response, { status: statusNotFound });
         return;
     }
-    sendJSON(response, post);
     const index = posts.findIndex(o => o.id === Number(id));
-    posts.splice(index, 1);
+    posts[index].removed = true;
+    sendJSON(response, posts[index]);
 });
 
 const server = http.createServer(function (request, response) {
