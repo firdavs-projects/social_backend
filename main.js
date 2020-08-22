@@ -125,8 +125,10 @@ methods.set('/posts.restore', function ({ response, searchParams }) {
     const index = posts.findIndex(o => o.id === Number(id));
     if (post.removed === true) {
         posts[index].removed = false;
+        sendJSON(response, posts[index]);
+        return;
     }
-    sendJSON(response, posts[index]);
+    sendResponse(response, { status: statusBadRequest });
 });
 
 const server = http.createServer(function (request, response) {
