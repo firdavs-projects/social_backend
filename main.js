@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 const http = require('http');
 
@@ -33,13 +33,13 @@ methods.set('/posts.get', function ({ response }) {
 });
 
 methods.set('/posts.getById', function ({ response, searchParams }) {
-    const id = Number(searchParams.get('id'));
-    if (isNaN(id) | id == '') {
+    const id = searchParams.get('id');
+    if (!searchParams.has('id') | isNaN(Number(id)) | id === '') {
         sendResponse(response, { status: statusBadRequest });
         return;
     }
-    const post = posts.filter(el => el.id == id);
-    if (post.length == 0) {
+    const post = posts.find(el => el.id === Number(id));
+    if (!post) {
         sendResponse(response, { status: statusNotFound });
         return;
     }
@@ -47,17 +47,18 @@ methods.set('/posts.getById', function ({ response, searchParams }) {
 });
 
 methods.set('/posts.post', function ({ response, searchParams }) {
-    if (!searchParams.has('content')) {
+
+    const content = searchParams.get('content');
+    if (!searchParams.has('content') | content === '') {
         sendResponse(response, { status: statusBadRequest });
         return;
     }
 
-    const content = searchParams.get('content');
     const post = {
         id: nextId++,
         content: content,
         created: Date.now(),
-    }
+    };
 
     posts.unshift(post);
     sendJSON(response, post);
