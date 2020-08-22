@@ -53,20 +53,17 @@ methods.set('/posts.getById', function ({ response, searchParams }) {
 });
 
 methods.set('/posts.post', function ({ response, searchParams }) {
-
     const content = searchParams.get('content');
     if (!searchParams.has('content') | content === '') {
         sendResponse(response, { status: statusBadRequest });
         return;
     }
-
     const post = {
         id: nextId++,
         content: content,
         created: Date.now(),
         removed: false,
     };
-
     posts.unshift(post);
     sendJSON(response, post);
 });
@@ -79,9 +76,14 @@ methods.set('/posts.edit', function ({ response, searchParams }) {
         return;
     }
     const post = posts.find(el => el.id === Number(id));
-    if (!post | post.removed === true) {
+    if (!post) {
         sendResponse(response, { status: statusNotFound });
         return;
+    } else {
+        if (post.removed === true) {
+            sendResponse(response, { status: statusNotFound });
+            return;
+        }
     }
     const index = posts.findIndex(o => o.id === Number(id));
     posts[index].content = content;
@@ -95,9 +97,14 @@ methods.set('/posts.delete', function ({ response, searchParams }) {
         return;
     }
     const post = posts.find(el => el.id === Number(id));
-    if (!post | post.removed === true) {
+    if (!post) {
         sendResponse(response, { status: statusNotFound });
         return;
+    } else {
+        if (post.removed === true) {
+            sendResponse(response, { status: statusNotFound });
+            return;
+        }
     }
     const index = posts.findIndex(o => o.id === Number(id));
     posts[index].removed = true;
@@ -105,24 +112,19 @@ methods.set('/posts.delete', function ({ response, searchParams }) {
 });
 
 const server = http.createServer(function (request, response) {
-
     const { pathname, searchParams } = new URL(request.url, `http://${request.headers.host}`);
-
     const method = methods.get(pathname);
     if (method === undefined) {
         sendResponse(response, { status: statusNotFound });
         return;
     }
-
     const params = {
         request,
         response,
         pathname,
         searchParams,
     };
-
     method(params);
-
 });
 
 server.listen(port);
