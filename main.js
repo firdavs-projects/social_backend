@@ -40,9 +40,14 @@ methods.set('/posts.getById', function ({ response, searchParams }) {
         return;
     }
     const post = posts.find(el => el.id === Number(id));
-    if (!post | post.removed === true) {
+    if (!post) {
         sendResponse(response, { status: statusNotFound });
         return;
+    } else {
+        if (post.removed === true) {
+            sendResponse(response, { status: statusNotFound });
+            return;
+        }
     }
     sendJSON(response, post);
 });
