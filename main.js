@@ -64,7 +64,18 @@ methods.set('/posts.post', function ({ response, searchParams }) {
     sendJSON(response, post);
 });
 
-methods.set('/posts.edit', function () { });
+methods.set('/posts.edit', function ({ response, searchParams }) {
+    const id = searchParams.get('id');
+    const content = searchParams.get('content');
+    if (!searchParams.has('id') | isNaN(Number(id)) | id === '' | !searchParams.has('content') | content === '') {
+        sendResponse(response, { status: statusBadRequest });
+        return;
+    }
+    const index = posts.findIndex(o => o.id === Number(id));
+    posts[index].content = content;
+    sendJSON(response, posts[index]);
+});
+
 methods.set('/posts.delete', function () { });
 
 const server = http.createServer(function (request, response) {
