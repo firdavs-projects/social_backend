@@ -71,6 +71,11 @@ methods.set('/posts.edit', function ({ response, searchParams }) {
         sendResponse(response, { status: statusBadRequest });
         return;
     }
+    const post = posts.find(el => el.id === Number(id));
+    if (!post) {
+        sendResponse(response, { status: statusNotFound });
+        return;
+    }
     const index = posts.findIndex(o => o.id === Number(id));
     posts[index].content = content;
     sendJSON(response, posts[index]);
@@ -87,9 +92,9 @@ methods.set('/posts.delete', function ({ response, searchParams }) {
         sendResponse(response, { status: statusNotFound });
         return;
     }
+    sendJSON(response, post);
     const index = posts.findIndex(o => o.id === Number(id));
     posts.splice(index, 1);
-    sendJSON(response, post);
 });
 
 const server = http.createServer(function (request, response) {
