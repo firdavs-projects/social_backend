@@ -1,0 +1,18 @@
+{
+    "sqltools.connections": [
+        {
+            "connectionTimeout": 5000,
+            "database": "social",
+            "driver": "MySQL",
+            "mysqlOptions": {
+                "authProtocol": "xprotocol"
+            },
+            "name": "social",
+            "password": "pass",
+            "port": 33060,
+            "previewLimit": 50,
+            "server": "localhost",
+            "username": "app"
+        }
+    ]
+}

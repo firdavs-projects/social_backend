@@ -1,6 +1,7 @@
 'use strict';
 
 const http = require('http');
+const mysqlx = require('@mysql/xdevapi');
 
 const port = 9999;
 const statusOk = 200;
@@ -9,6 +10,13 @@ const statusNotFound = 404;
 
 let nextId = 1;
 const posts = [];
+
+const client = mysqlx.getClient({
+    user: 'app',
+    password: 'pass',
+    host: '0.0.0.0',
+    port: 3306
+});
 
 function sendResponse(response, { status = statusOk, headers = {}, body = null }) {
     Object.entries(headers).forEach(function ([key, value]) {
