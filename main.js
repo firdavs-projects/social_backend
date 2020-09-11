@@ -2,11 +2,15 @@
 
 const http = require('http');
 const mysqlx = require('@mysql/xdevapi');
+const { table } = require('console');
 
-const port = 9999;
+const port = process.env.PORT || 9999;
 const statusOk = 200;
+const statusNoContent = 204;
 const statusBadRequest = 400;
 const statusNotFound = 404;
+const statusInternalServerError = 500;
+const schema = 'social';
 
 let nextId = 1;
 const posts = [];
@@ -35,10 +39,21 @@ function sendJSON(response, body) {
     });
 }
 
+function map(columns) {
+    return row => row.reduce((res, value, i) => ({ ...res, [columns[i].getColumnLabel()]: value }), {});
+}
+
 const methods = new Map();
-methods.set('/posts.get', function ({ response }) {
-    const filtered = posts.filter(el => el.removed === false);
-    sendJSON(response, filtered);
+methods.set('/posts.get', async ({ response, db }) => {
+    const table = await db.getTable('posts');
+    const result = await table.select(['id', 'content', 'likes', 'created'])
+        .orderBy('created DESC')
+        .execute();
+    const data = result.fetchAll();
+    result.getAffectedItemsCount();
+    const columns = result.getColumns();
+    const posts = data.map(columns);
+    sendJSON(response, posts);
 });
 
 methods.set('/posts.getById', function ({ response, searchParams }) {
@@ -98,25 +113,31 @@ methods.set('/posts.edit', function ({ response, searchParams }) {
     sendJSON(response, posts[index]);
 });
 
-methods.set('/posts.delete', function ({ response, searchParams }) {
-    const id = searchParams.get('id');
-    if (!searchParams.has('id') | isNaN(Number(id)) | id === '') {
+methods.set('/posts.delete', async ({ response, searchParams, db }) => {
+    if (!searchParams.has('id')) {
         sendResponse(response, { status: statusBadRequest });
         return;
     }
-    const post = posts.find(el => el.id === Number(id));
-    if (!post) {
+
+    const id = Number(searchParams.get('id'));
+    if (Number.isNaN(id)) {
+        sendResponse(response, { status: statusBadRequest });
+        return;
+    }
+
+    const table = await db.getTable('posts');
+    const result = await table.update()
+        .set('removed', true)
+        .where('id=:id')
+        .bind('id', id)
+        .execute();
+    const removed = result.getAffectedItemsCount();
+
+    if (removed === 0) {
         sendResponse(response, { status: statusNotFound });
         return;
-    } else {
-        if (post.removed === true) {
-            sendResponse(response, { status: statusNotFound });
-            return;
-        }
     }
-    const index = posts.findIndex(o => o.id === Number(id));
-    posts[index].removed = true;
-    sendJSON(response, posts[index]);
+    sendResponse(response, { status: statusNoContent });
 });
 
 methods.set('/posts.restore', function ({ response, searchParams }) {
@@ -139,20 +160,39 @@ methods.set('/posts.restore', function ({ response, searchParams }) {
     sendResponse(response, { status: statusBadRequest });
 });
 
-const server = http.createServer(function (request, response) {
+const server = http.createServer(async (request, response) => {
     const { pathname, searchParams } = new URL(request.url, `http://${request.headers.host}`);
+
     const method = methods.get(pathname);
     if (method === undefined) {
         sendResponse(response, { status: statusNotFound });
         return;
     }
-    const params = {
-        request,
-        response,
-        pathname,
-        searchParams,
-    };
-    method(params);
+    let session = null;
+    try {
+        session = await client.getSession();
+        const db = await session.getschema(schema);
+
+        const params = {
+            request,
+            response,
+            pathname,
+            searchParams,
+            db,
+        };
+
+        await method(params);
+    } catch (e) {
+        sendResponse(response, { status: statusInternalServerError });
+    } finally {
+        if (session !== null) {
+            try {
+                await session.close();
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    }
 });
 
 server.listen(port);
